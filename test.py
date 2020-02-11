@@ -28,7 +28,7 @@ eps = np.finfo(float).eps
 
 
 use_cuda = torch.cuda.is_available()
-use_cuda = True
+use_cuda = False
 
 if use_cuda:
     device = torch.device("cuda")
@@ -51,7 +51,7 @@ num_epochs = 16
 
 # dataset
 path = '../data/ENZYMES/'
-dataset = TUDataset(path, name='ENZYMES')
+dataset = TUDataset(root=path, name='ENZYMES')
 dataset = dataset.shuffle()
 n = len(dataset) // 10
 
@@ -199,6 +199,37 @@ def one_hot(labels, n_class):
     return mask.scatter_(1, labels, 1)
 
 
+def nan_check_and_break(tensor, name=""):
+    if isinstance(input, list) or isinstance(input, tuple):
+        for tensor in input:
+            return(nan_check_and_break(tensor, name))
+    else:
+        if nan_check(tensor, name) is True:
+            exit(-1)
+
+
+def nan_check(tensor, name=""):
+    if isinstance(input, list) or isinstance(input, tuple):
+        for tensor in input:
+            return(nan_check(tensor, name))
+    else:
+        if torch.sum(torch.isnan(tensor)) > 0:
+            print("Tensor {} with shape {} was NaN.".format(name, tensor.shape))
+            return True
+
+        elif torch.sum(torch.isinf(tensor)) > 0:
+            print("Tensor {} with shape {} was Inf.".format(name, tensor.shape))
+            return True
+
+    return False
+
+
+def zero_check_and_break(tensor, name=""):
+    if torch.sum(tensor == 0).item() > 0:
+        print("tensor {} of {} dim contained ZERO!!".format(name, tensor.shape))
+        exit(-1)
+
+
 # Model def
 model = Transformer(EMBED_DIM, num_heads, depth, vocab_size, num_classes).to(device)
 
@@ -219,14 +250,24 @@ def train(model, dataset, opt, sch, loss_func, device):
         x = x.to(device)
         y = y.to(device)
         subset = torch.arange(x.size(0), device=edge_index.device)
+
         walks = random_walk(edge_index[0], edge_index[1], subset, walk_length, p, q, x.size(0))
+        if (walks.size(0) == 0):
+            print('zero sized walks')
+
+        nan_check_and_break(walks, "walks nan check")
+
         # model forward
         y = y.repeat(walks.size(0),)
+
         y_pred = model(walks)
+
+        nan_check_and_break(y_pred, "y_pred")
 
         loss = loss_func(y_pred, y)
 
         print(loss.item())
+
 
         batch_loss += loss.item() / walks.size(0)
 
@@ -274,5 +315,5 @@ for epoch in range(num_epochs):
     t_loss = train(model, train_dataset, opt, sch, loss_func, device)
     train_loss.append(t_loss)
 
-    v_acc = validate(model, test_dataset, device)
-    valid_acc.append(v_acc)
+    # v_acc = validate(model, test_dataset, device)
+    # valid_acc.append(v_acc)
