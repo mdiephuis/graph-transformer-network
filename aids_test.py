@@ -1,13 +1,8 @@
-import os
-import sys
-import random
 import numpy as np
-import networkx as nx
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
-
 
 from external.data_loader import load_local_data
 from external.torch_dataloader import GraphDataset
@@ -15,9 +10,7 @@ from models import Transformer
 
 eps = np.finfo(float).eps
 
-
 use_cuda = torch.cuda.is_available()
-use_cuda = False
 
 if use_cuda:
     device = torch.device("cuda")
@@ -28,7 +21,7 @@ else:
 
 # Datasets
 dataset_name = 'aids'
-file_path = 'data/AIDS'
+file_path = 'data'
 
 X, y = load_local_data(file_path, dataset_name, attributes=True)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
@@ -52,7 +45,7 @@ p, q = 1, 1
 num_epochs = 16
 
 # k, num_heads, depth, seq_length, num_tokens, num_
-model = Transformer(EMBED_DIM, num_heads, test_dataset.walklenght, depth, num_classes).to(device)
+model = Transformer(EMBED_DIM, num_heads, test_dataset.walklength, depth, num_classes).to(device)
 
 lr_warmup = 10000
 batch_size = 16
@@ -66,13 +59,13 @@ train_loss = []
 valid_acc = []
 
 
-def train(model, dataset, opt, sch, loss_func, device):
+def train(model, loader, opt, sch, loss_func, device):
     model.train()
     batch_loss = 0
-    for graph in dataset:
+    for graph in loader:
         x, y = graph
-        x = x.to(device)
-        y = y.to(device)
+        x = x.to(device, dtype=torch.float)
+        y = y.to(device, dtype=torch.long)
 
         y_pred = model(x)
 
@@ -86,14 +79,14 @@ def train(model, dataset, opt, sch, loss_func, device):
         opt.step()
         sch.step()
 
-    return batch_loss / len(dataset)
+    return batch_loss / len(loader)
 
 
-def validate(model, dataset, device):
+def validate(model, loader, opt, sch, loss_func, device):
     model.eval()
     batch_acc = 0
 
-    for graph in dataset:
+    for graph in loader:
         x, y = graph
         x = x.to(device, dtype=torch.float)
         y = y.to(device, dtype=torch.long)
@@ -104,7 +97,7 @@ def validate(model, dataset, device):
         correct /= y.size(0)
         batch_acc += (correct * 100)
 
-    return batch_acc / len(dataset)
+    return batch_acc / len(loader)
 
 # Main epoch loop
 
