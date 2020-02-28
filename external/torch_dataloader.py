@@ -5,15 +5,14 @@ import random
 import torch
 from torch.utils.data import Dataset, DataLoader
 import networkx as nx
-from data_loader import load_local_data
 
-# sys.path.append(os.path.realpath('lib'))
+from .data_loader import load_local_data
 
 
 class GraphDataset(Dataset):
     """Face Landmarks dataset."""
 
-    def __init__(self, X, y, walklenght=1000, transform=None):
+    def __init__(self, X, y, walklength=1000, transform=None):
         """
         Args:
             X: nx graphs.
@@ -24,10 +23,10 @@ class GraphDataset(Dataset):
         self.graphs = X
         self.labels = y
         self.transform = transform
-        self.walklenght = walklenght
+        self.walklength = walklength
 
     def __len__(self):
-        return len(self.X)
+        return len(self.graphs)
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
@@ -36,8 +35,8 @@ class GraphDataset(Dataset):
         nx_graph = self.graphs[idx].nx_graph
         if self.transform:
             nx_graph = self.transform(nx_graph)
-        walk = randomWalk(nx_graph, self.walklenght)
-        walk = np.reshape(walk, (self.walklenght, -1))
+        walk = randomWalk(nx_graph, self.walklength)
+        walk = np.reshape(walk, (self.walklength, -1))
         return walk, self.labels[idx]
 
 

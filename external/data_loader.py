@@ -1,9 +1,10 @@
-from graph import Graph, wl_labeling
 import networkx as nx
-from utils import per_section, indices_to_one_hot
 from collections import defaultdict
 import numpy as np
 import math
+
+from .graph import Graph, wl_labeling
+from .utils import per_section, indices_to_one_hot
 
 
 class NotImplementedError(Exception):
