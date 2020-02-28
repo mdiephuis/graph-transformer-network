@@ -55,13 +55,17 @@ opt = torch.optim.Adam(lr=lr, params=model.parameters())
 sch = torch.optim.lr_scheduler.LambdaLR(opt, lambda i: min(i / (lr_warmup / batch_size), 1.0))
 loss_func = nn.NLLLoss()
 
-train_loss = []
-valid_acc = []
 
+def train_validate(model, loader, opt, loss_func, train, device):
 
-def train(model, loader, opt, sch, loss_func, device):
-    model.train()
+    if train:
+        model.train()
+    else:
+        model.eval()
+
     batch_loss = 0
+    batch_acc = 0
+
     for graph in loader:
         x, y = graph
         x = x.to(device, dtype=torch.float)
@@ -73,41 +77,45 @@ def train(model, loader, opt, sch, loss_func, device):
 
         batch_loss += loss.item() / x.size(0)
 
-        opt.zero_grad()
-        loss.backward()
-
-        opt.step()
-        sch.step()
-
-    return batch_loss / len(loader)
-
-
-def validate(model, loader, opt, sch, loss_func, device):
-    model.eval()
-    batch_acc = 0
-
-    for graph in loader:
-        x, y = graph
-        x = x.to(device, dtype=torch.float)
-        y = y.to(device, dtype=torch.long)
-        y_pred = model(x)
-
         pred = y_pred.max(dim=1)[1]
         correct = pred.eq(y).sum().item()
         correct /= y.size(0)
         batch_acc += (correct * 100)
 
-    return batch_acc / len(loader)
+        if train:
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+
+    return batch_loss / len(loader), batch_acc / len(loader)
+
+
+def execute_graph(model, train_loader, test_loader, opt, sch, loss_func, device):
+
+    t_loss, t_acc = train_validate(model, train_loader, opt, loss_func, True, device)
+
+    v_loss, v_acc = train_validate(model, test_loader, opt, loss_func, False, device)
+
+    sch.step()
+
+    return t_loss, v_loss, t_acc, v_acc
+
 
 # Main epoch loop
+train_loss = []
+valid_loss = []
 
+train_acc = []
+valid_acc = []
 
 for epoch in range(num_epochs):
-    print("Epoch: {}".format(epoch))
-    t_loss = train(model, train_loader, opt, sch, loss_func, device)
-    train_loss.append(t_loss)
-    print(t_loss)
 
-    v_acc = validate(model, test_loader, opt, sch, loss_func, device)
+    t_loss, v_loss, t_acc, v_acc = execute_graph(model, train_loader, test_loader, opt, sch, loss_func, device)
+
+    train_loss.append(t_loss)
+    train_acc.append(t_acc)
+
+    valid_loss.append(v_loss)
     valid_acc.append(v_acc)
-    print(v_acc)
+
+    print("Epoch: {} \t Train acc {} \t Valid acc {}".format(epoch, t_acc, v_acc))
