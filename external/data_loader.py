@@ -140,6 +140,13 @@ def load_local_data(data_path, name, one_hot=False, attributes=True, use_node_de
         else:
             dataset = build_IGN_dataset(path, prefix='IGN19')
 
+    if name == 'coildel':
+        path = data_path + '/COIL-DEL/'
+        if attributes:
+            dataset = build_COILDEL_dataset(path, type_attr='real')
+        else:
+            dataset = build_COILDEL_dataset(path)
+
     X, y = zip(*dataset)
 
     if wl != 0:
@@ -615,5 +622,27 @@ def build_Fingerprint_dataset(path, type_attr='real'):
             for node2 in adjency[node]:
                 g.add_edge((node, node2))
         data.append((g, i[1]))
+
+    return data
+
+
+def build_COILDEL_dataset(path, type_attr='label'):
+    graphs = graph_label_list(path, 'COIL-DEL_graph_labels.txt')
+    if type_attr == 'label':
+        node_dic = node_labels_dic(path, 'COIL-DEL_node_labels.txt')  # A voir pour les attributes
+    if type_attr == 'real':
+        node_dic = node_attr_dic(path, 'COIL-DEL_node_attributes.txt')
+    adjency = compute_adjency(path, 'COIL-DEL_A.txt')
+    data_dict = graph_indicator(path, 'COIL-DEL_graph_indicator.txt')
+    data = []
+    for i in graphs:
+        g = Graph()
+        for node in data_dict[i[0]]:
+            g.name = i[0]
+            g.add_vertex(node)
+            g.add_one_attribute(node, node_dic[node])
+            for node2 in adjency[node]:
+                g.add_edge((node, node2))
+        data.append((g, i[1] - 1))
 
     return data

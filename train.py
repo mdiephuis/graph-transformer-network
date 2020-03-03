@@ -15,14 +15,17 @@ parser = argparse.ArgumentParser(description='GRAPH_ATTENTION')
 
 parser.add_argument('--uid', type=str, default='GRAPHATT',
                     help='Staging identifier (default: GRAPHATT)')
-parser.add_argument('--dataset-name', type=str, default='AIDS',
-                    help='Name of dataset (default: MNIST')
+parser.add_argument('--dataset-name', type=str, default='aids',
+                    help='Name of dataset (default: aids')
 parser.add_argument('--data-dir', type=str, default='data',
                     help='Path to dataset (default: data')
 parser.add_argument('--epochs', type=int, default=30, metavar='N',
                     help='number of training epochs (default: 30)')
-parser.add_argument('--batch-size', type=int, default=64, metavar='N',
+parser.add_argument('--batch-size', type=int, default=16, metavar='N',
                     help='input training batch-size')
+parser.add_argument('--no-cuda', action='store_true', default=False,
+                    help='disables cuda (default: False')
+
 args = parser.parse_args()
 
 # Set cuda
@@ -36,11 +39,7 @@ if use_cuda:
 else:
     device = torch.device("cpu")
 
-
-# Datasets
-dataset_name = 'aids'
-
-X, y = load_local_data(args.data_dir, dataset_name, attributes=True)
+X, y = load_local_data(args.data_dir, args.dataset_name, attributes=True)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
 train_dataset = GraphDataset(X_train, y_train)
@@ -60,7 +59,7 @@ if args.dataset_name == 'aids':
     num_heads = 8
     depth = 6
     p, q = 1, 1
-elif args.dataset_name == 'coil':
+elif args.dataset_name == 'coildel':
     EMBED_DIM = 2
     num_classes = 100
     num_heads = 8
